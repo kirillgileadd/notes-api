@@ -16,7 +16,10 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "migrate": "npx prisma migrate deploy",
+    "seed": "npx ts-node prisma/seed.ts",
+    "initdb": "npm run migrate && npm run seed"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

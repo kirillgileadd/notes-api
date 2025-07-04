@@ -19,6 +19,8 @@ model User {
   role      Role     @default(user)
   tokens    Token[]
   notes     Note[]
+  comments  Comment[]
+  reactions Reaction[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   collaborators Collaborator[]
@@ -40,12 +42,14 @@ model Note {
   user      User     @relation(fields: [userId], references: [id])
   userId    Int
   tags      Tag[]    @relation("NoteTags")
+  comments  Comment[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   archived  Boolean  @default(false)
   pinned    Boolean  @default(false)
   publicToken String? @unique
   collaborators Collaborator[]
+  deadline  DateTime?
 }
 
 model Tag {
@@ -67,6 +71,28 @@ model Collaborator {
   userId   Int
   createdAt DateTime @default(now())
   @@unique([noteId, userId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  note      Note     @relation(fields: [noteId], references: [id])
+  noteId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  reactions Reaction[]
+  createdAt DateTime @default(now())
+}
+
+model Reaction {
+  id          Int      @id @default(autoincrement())
+  emoji       String   // например, '👍', '😂', '🔥'
+  comment     Comment  @relation(fields: [commentId], references: [id])
+  commentId   Int
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+  createdAt   DateTime @default(now())
+  @@unique([commentId, userId, emoji])
 }
 
 enum Role {

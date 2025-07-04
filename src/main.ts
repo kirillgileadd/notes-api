@@ -4,22 +4,10 @@ import { AppModule } from "./app.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { ValidationPipe } from "@nestjs/common";
 import * as cookieParser from "cookie-parser";
-import { PrismaClient } from "@prisma/client";
-import { readFileSync } from "fs";
+
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  // Инициализация ролей (создание пользователей с разными ролями для теста)
-  const prisma = new PrismaClient();
-  const roles = ["admin", "user", "manager"] as const;
-  for (const role of roles) {
-    const phone = `+7000000000${roles.indexOf(role)}`;
-    const exists = await prisma.user.findFirst({ where: { role } });
-    if (!exists) {
-      await prisma.user.create({ data: { phone, role } });
-    }
-  }
 
   app.use(cookieParser());
   app.enableCors({
@@ -29,7 +17,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
   const wsDocUrl =
-    "https://github.com/your-repo/notes-api/blob/main/WEBSOCKET_API.md";
+    "https://github.com/kirillgileadd/notes-api/blob/main/WEBSOCKET_API.md";
   const wsDocLocalUrl = "http://localhost:3000/docs/WEBSOCKET_API.md";
   const config = new DocumentBuilder()
     .setTitle("Notes API")

@@ -27,9 +27,4 @@ import { join } from "path";
     },
   ],
 })
-export class AppModule {
-  constructor() {
-    // Удаляю импорт readFileSync и DocumentBuilder
-    // Удаляю конструктор и любые попытки работы с документацией
-  }
-}
+export class AppModule {}

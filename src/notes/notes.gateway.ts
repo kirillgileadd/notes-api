@@ -50,14 +50,16 @@ export class NotesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private readonly jwtService: JwtService) {}
 
   async handleConnection(socket: Socket) {
+    console.log("handleConnection");
     const token = socket.handshake.query.token as string;
     if (!token) {
-      socket.emit("error", "Нет токена");
+      socket.emit("auth", "Нет токена");
       socket.disconnect();
       return;
     }
     try {
       const payload = await this.jwtService.verifyAsync(token);
+      console.log(payload);
       socket.data.userId = payload.sub;
     } catch (e) {
       socket.emit("error", "Неверный токен");
@@ -100,7 +102,6 @@ export class NotesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socket.disconnect();
       return;
     }
-    socket.join(roomId);
     if (!this.rooms[roomId]) {
       this.rooms[roomId] = { users: {} };
     }
