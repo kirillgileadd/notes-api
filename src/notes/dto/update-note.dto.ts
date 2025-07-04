@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, Length } from "class-validator";
+import { IsOptional, IsString, Length, IsArray, IsInt } from "class-validator";
 
 export class UpdateNoteDto {
   @ApiPropertyOptional({ example: "Новый заголовок", description: "Заголовок" })
@@ -12,4 +12,10 @@ export class UpdateNoteDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @ApiPropertyOptional({ example: [1, 2], description: "ID тегов" })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  tags?: number[];
 }

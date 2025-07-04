@@ -21,6 +21,7 @@ model User {
   notes     Note[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  collaborators Collaborator[]
 }
 
 model Token {
@@ -41,6 +42,10 @@ model Note {
   tags      Tag[]    @relation("NoteTags")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  archived  Boolean  @default(false)
+  pinned    Boolean  @default(false)
+  publicToken String? @unique
+  collaborators Collaborator[]
 }
 
 model Tag {
@@ -52,6 +57,16 @@ model Tag {
 model SmsCode {
   phone String @id
   code  String
+}
+
+model Collaborator {
+  id       Int      @id @default(autoincrement())
+  note     Note     @relation(fields: [noteId], references: [id])
+  noteId   Int
+  user     User     @relation(fields: [userId], references: [id])
+  userId   Int
+  createdAt DateTime @default(now())
+  @@unique([noteId, userId])
 }
 
 enum Role {

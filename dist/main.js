@@ -24,9 +24,11 @@ async function bootstrap() {
         credentials: true,
     });
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true }));
+    const wsDocUrl = "https://github.com/your-repo/notes-api/blob/main/WEBSOCKET_API.md";
+    const wsDocLocalUrl = "http://localhost:3000/docs/WEBSOCKET_API.md";
     const config = new swagger_1.DocumentBuilder()
         .setTitle("Notes API")
-        .setDescription("API для заметок с авторизацией")
+        .setDescription(`API для заметок с авторизацией\n\n## WebSocket API\n[Документация по WebSocket (GitHub)](${wsDocUrl})\n[Документация по WebSocket (локально)](${wsDocLocalUrl})`)
         .setVersion("1.0")
         .addBearerAuth()
         .addCookieAuth("refresh_token")

@@ -5,9 +5,21 @@ import { APP_GUARD } from "@nestjs/core";
 import { RolesGuard } from "./auth/guards/roles.guard";
 import { NotesModule } from "./notes/notes.module";
 import { TagsModule } from "./tags/tags.module";
+import { ServeStaticModule } from "@nestjs/serve-static";
+import { join } from "path";
 
 @Module({
-  imports: [PrismaModule, AuthModule, NotesModule, TagsModule],
+  imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, ".."),
+      serveRoot: "/docs",
+      exclude: ["/api*"],
+    }),
+    PrismaModule,
+    AuthModule,
+    NotesModule,
+    TagsModule,
+  ],
   providers: [
     {
       provide: APP_GUARD,
@@ -15,4 +27,9 @@ import { TagsModule } from "./tags/tags.module";
     },
   ],
 })
-export class AppModule {}
+export class AppModule {
+  constructor() {
+    // Удаляю импорт readFileSync и DocumentBuilder
+    // Удаляю конструктор и любые попытки работы с документацией
+  }
+}

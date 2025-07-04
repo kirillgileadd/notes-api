@@ -28,4 +28,11 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateNoteDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: [1, 2], description: "ID тегов" }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsInt)({ each: true }),
+    __metadata("design:type", Array)
+], UpdateNoteDto.prototype, "tags", void 0);
 //# sourceMappingURL=update-note.dto.js.map
