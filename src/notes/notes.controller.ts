@@ -23,6 +23,7 @@ import { UpdateNoteDto } from "./dto/update-note.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Request } from "express";
 import { AddCollaboratorDto } from "./dto/add-collaborator.dto";
+import { SetDeadlineDto } from "./dto/set-deadline.dto";
 
 @ApiTags("notes")
 @ApiBearerAuth()
@@ -61,6 +62,37 @@ export class NotesController {
     @Query("tags") tags?: string
   ) {
     return this.notesService.findAll(req.user!.userId, {
+      from,
+      to,
+      search,
+      sort,
+      tags: tags ? tags.split(",").map(Number) : undefined,
+    });
+  }
+
+  @Get("archived")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Получить все архивные заметки пользователя" })
+  @ApiResponse({ status: 200, description: "Список архивных заметок" })
+  @ApiQuery({ name: "from", required: false })
+  @ApiQuery({ name: "to", required: false })
+  @ApiQuery({ name: "search", required: false })
+  @ApiQuery({ name: "sort", required: false, enum: ["asc", "desc"] })
+  @ApiQuery({
+    name: "tags",
+    required: false,
+    type: [Number],
+    description: "Массив id тегов",
+  })
+  findArchived(
+    @Req() req: Request,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("search") search?: string,
+    @Query("sort") sort?: "asc" | "desc",
+    @Query("tags") tags?: string
+  ) {
+    return this.notesService.findArchived(req.user!.userId, {
       from,
       to,
       search,
@@ -113,35 +145,28 @@ export class NotesController {
     return this.notesService.archive(req.user!.userId, Number(id));
   }
 
-  @Get("archived")
+  @Post(":id/deadline")
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: "Получить все архивные заметки пользователя" })
-  @ApiResponse({ status: 200, description: "Список архивных заметок" })
-  @ApiQuery({ name: "from", required: false })
-  @ApiQuery({ name: "to", required: false })
-  @ApiQuery({ name: "search", required: false })
-  @ApiQuery({ name: "sort", required: false, enum: ["asc", "desc"] })
-  @ApiQuery({
-    name: "tags",
-    required: false,
-    type: [Number],
-    description: "Массив id тегов",
-  })
-  findArchived(
+  @ApiOperation({ summary: "Установить дедлайн для заметки" })
+  @ApiResponse({ status: 200, description: "Дедлайн установлен" })
+  setDeadline(
     @Req() req: Request,
-    @Query("from") from?: string,
-    @Query("to") to?: string,
-    @Query("search") search?: string,
-    @Query("sort") sort?: "asc" | "desc",
-    @Query("tags") tags?: string
+    @Param("id") id: string,
+    @Body() dto: SetDeadlineDto
   ) {
-    return this.notesService.findArchived(req.user!.userId, {
-      from,
-      to,
-      search,
-      sort,
-      tags: tags ? tags.split(",").map(Number) : undefined,
-    });
+    return this.notesService.setDeadline(
+      req.user!.userId,
+      Number(id),
+      dto.deadline
+    );
+  }
+
+  @Delete(":id/deadline")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Удалить дедлайн заметки" })
+  @ApiResponse({ status: 200, description: "Дедлайн удален" })
+  removeDeadline(@Req() req: Request, @Param("id") id: string) {
+    return this.notesService.removeDeadline(req.user!.userId, Number(id));
   }
 
   @Post(":id/share")

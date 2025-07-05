@@ -11,9 +11,26 @@ import { UpdateCommentDto } from "./dto/update-comment.dto";
 export class CommentsService {
   constructor(private prisma: PrismaService) {}
 
+  private getCommentInclude() {
+    return {
+      user: true,
+      reactions: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              phone: true,
+            },
+          },
+        },
+      },
+    };
+  }
+
   async create(noteId: number, userId: number, dto: CreateCommentDto) {
     return this.prisma.comment.create({
       data: { content: dto.content, noteId, userId },
+      include: this.getCommentInclude(),
     });
   }
 
@@ -21,7 +38,7 @@ export class CommentsService {
     return this.prisma.comment.findMany({
       where: { noteId },
       orderBy: { createdAt: "asc" },
-      include: { user: true },
+      include: this.getCommentInclude(),
     });
   }
 
@@ -29,7 +46,11 @@ export class CommentsService {
     const comment = await this.prisma.comment.findUnique({ where: { id } });
     if (!comment) throw new NotFoundException("Комментарий не найден");
     if (comment.userId !== userId) throw new ForbiddenException("Нет доступа");
-    return this.prisma.comment.update({ where: { id }, data: dto });
+    return this.prisma.comment.update({
+      where: { id },
+      data: dto,
+      include: this.getCommentInclude(),
+    });
   }
 
   async remove(userId: number, id: number) {

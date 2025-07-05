@@ -18,6 +18,7 @@ export class NotesService {
         title: dto.title,
         content: dto.content,
         userId,
+        ...(dto.deadline ? { deadline: new Date(dto.deadline) } : {}),
       },
       include: { tags: true },
     });
@@ -62,6 +63,7 @@ export class NotesService {
       tags?: number[];
     }
   ) {
+    console.log("findArchived", userId, filter);
     const where: any = { userId, archived: true };
     if (filter?.from || filter?.to) {
       where.createdAt = {};
@@ -106,11 +108,12 @@ export class NotesService {
 
   async update(userId: number, id: number, dto: UpdateNoteDto) {
     await this.checkAccess(userId, id);
-    const { tags, ...rest } = dto;
+    const { tags, deadline, ...rest } = dto;
     return this.prisma.note.update({
       where: { id },
       data: {
         ...rest,
+        ...(deadline ? { deadline: new Date(deadline) } : {}),
         ...(tags ? { tags: { set: tags.map((id) => ({ id })) } } : {}),
       },
       include: { tags: true, collaborators: true },
@@ -142,6 +145,28 @@ export class NotesService {
     return this.prisma.note.update({
       where: { id },
       data: { archived: true },
+      include: { tags: true },
+    });
+  }
+
+  async setDeadline(userId: number, id: number, deadline: string) {
+    const note = await this.prisma.note.findUnique({ where: { id } });
+    if (!note || note.userId !== userId)
+      throw new NotFoundException("Заметка не найдена");
+    return this.prisma.note.update({
+      where: { id },
+      data: { deadline: new Date(deadline) },
+      include: { tags: true },
+    });
+  }
+
+  async removeDeadline(userId: number, id: number) {
+    const note = await this.prisma.note.findUnique({ where: { id } });
+    if (!note || note.userId !== userId)
+      throw new NotFoundException("Заметка не найдена");
+    return this.prisma.note.update({
+      where: { id },
+      data: { deadline: null },
       include: { tags: true },
     });
   }

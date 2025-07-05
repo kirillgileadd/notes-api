@@ -21,13 +21,28 @@ export class ReactionsService {
     if (exists) throw new ConflictException("Реакция уже поставлена");
     return this.prisma.reaction.create({
       data: { commentId, userId, emoji: dto.emoji },
+      include: {
+        user: {
+          select: {
+            id: true,
+            phone: true
+          }
+        }
+      },
     });
   }
 
   async findAll(commentId: number) {
     return this.prisma.reaction.findMany({
       where: { commentId },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            phone: true
+          }
+        }
+      },
       orderBy: { createdAt: "asc" },
     });
   }

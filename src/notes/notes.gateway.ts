@@ -50,7 +50,7 @@ export class NotesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private readonly jwtService: JwtService) {}
 
   async handleConnection(socket: Socket) {
-    console.log("handleConnection");
+    console.log("handleConnection", socket.id);
     const token = socket.handshake.query.token as string;
     if (!token) {
       socket.emit("auth", "Нет токена");
@@ -59,19 +59,24 @@ export class NotesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     try {
       const payload = await this.jwtService.verifyAsync(token);
-      console.log(payload);
+      console.log("JWT payload:", payload);
       socket.data.userId = payload.sub;
+      socket.emit("auth", "Авторизация успешна");
     } catch (e) {
+      console.error("JWT verification failed:", e);
       socket.emit("error", "Неверный токен");
       socket.disconnect();
     }
   }
 
   handleDisconnect(socket: Socket) {
+    console.log("handleDisconnect", socket.id);
+    // Удаляем пользователя из всех комнат
     for (const roomId in this.rooms) {
       if (this.rooms[roomId].users[socket.id]) {
         delete this.rooms[roomId].users[socket.id];
-        this.broadcastUsers(roomId);
+        // Уведомляем остальных пользователей
+        socket.to(roomId).emit("users", this.getUsersInRoom(roomId));
       }
     }
   }
@@ -88,28 +93,52 @@ export class NotesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const roomId = String(data.noteId);
     const userId = socket.data.userId;
+
+    console.log(`User ${userId} (socket ${socket.id}) joining room ${roomId}`);
+
     // Проверка доступа
-    const note = await prisma.note.findUnique({
-      where: { id: data.noteId },
-      include: { collaborators: true },
-    });
-    if (
-      !note ||
-      (note.userId !== userId &&
-        !note.collaborators.some((c) => c.userId === userId))
-    ) {
-      socket.emit("error", "Нет доступа к заметке");
-      socket.disconnect();
+    try {
+      const note = await prisma.note.findUnique({
+        where: { id: data.noteId },
+        include: { collaborators: true },
+      });
+
+      if (
+        !note ||
+        (note.userId !== userId &&
+          !note.collaborators.some((c) => c.userId === userId))
+      ) {
+        console.error("Нет доступа к заметке");
+        socket.emit("error", "Нет доступа к заметке");
+        return;
+      }
+    } catch (error) {
+      console.error("Database error:", error);
+      socket.emit("error", "Ошибка проверки доступа");
       return;
     }
+
+    // Присоединяемся к комнате Socket.IO
+    await socket.join(roomId);
+
+    // Инициализируем комнату если её нет
     if (!this.rooms[roomId]) {
       this.rooms[roomId] = { users: {} };
     }
+
+    // Добавляем пользователя в комнату
     this.rooms[roomId].users[socket.id] = {
       userId,
       caret: { start: 0, end: 0 },
     };
-    this.broadcastUsers(roomId);
+
+    // Отправляем список пользователей всем в комнате
+    const users = this.getUsersInRoom(roomId);
+    this.server.to(roomId).emit("users", users);
+
+    console.log(
+      `User ${userId} joined room ${roomId}. Total users: ${users.length}`
+    );
   }
 
   /**
@@ -123,10 +152,25 @@ export class NotesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket
   ) {
     const roomId = String(data.noteId);
+    const userId = socket.data.userId;
+
+    console.log(`User ${userId} (socket ${socket.id}) leaving room ${roomId}`);
+
+    // Покидаем комнату Socket.IO
     socket.leave(roomId);
+
+    // Удаляем пользователя из нашей структуры
     if (this.rooms[roomId]) {
       delete this.rooms[roomId].users[socket.id];
-      this.broadcastUsers(roomId);
+
+      // Если комната пуста, удаляем её
+      if (Object.keys(this.rooms[roomId].users).length === 0) {
+        delete this.rooms[roomId];
+      } else {
+        // Уведомляем остальных пользователей
+        const users = this.getUsersInRoom(roomId);
+        this.server.to(roomId).emit("users", users);
+      }
     }
   }
 
@@ -143,9 +187,13 @@ export class NotesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const roomId = String(data.noteId);
     const userId = socket.data.userId;
+
     if (this.rooms[roomId] && this.rooms[roomId].users[socket.id]) {
       this.rooms[roomId].users[socket.id].caret = data.caret;
-      this.broadcastUsers(roomId);
+
+      // Отправляем обновленный список пользователей всем в комнате
+      const users = this.getUsersInRoom(roomId);
+      this.server.to(roomId).emit("users", users);
     }
   }
 
@@ -161,19 +209,28 @@ export class NotesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const roomId = String(data.noteId);
     const userId = socket.data.userId;
-    // Broadcast всем, кроме отправителя
+
+    console.log(
+      `Edit from user ${userId} in room ${roomId}: ${data.content.substring(0, 50)}...`
+    );
+
+    // Broadcast всем в комнате, кроме отправителя
     socket.to(roomId).emit("edit", { userId, content: data.content });
   }
 
   /**
-   * Отправить всем пользователям комнаты список пользователей и их caret
+   * Получить список пользователей в комнате
    * @param roomId string
+   * @returns User[]
    */
-  private broadcastUsers(roomId: string) {
-    const users = Object.values(this.rooms[roomId]?.users || {}).map((u) => ({
+  private getUsersInRoom(roomId: string) {
+    if (!this.rooms[roomId]) {
+      return [];
+    }
+
+    return Object.values(this.rooms[roomId].users).map((u) => ({
       userId: u.userId,
       caret: u.caret,
     }));
-    this.server.to(roomId).emit("users", users);
   }
 }
