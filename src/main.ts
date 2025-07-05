@@ -16,7 +16,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
   const wsDocUrl =
-    "https://github.com/kirillgileadd/notes-api/blob/main/WEBSOCKET_API.md";
+    "https://github.com/kirillgileadd/notes-api/blob/main/docs/WEBSOCKET_API.md";
   const wsDocLocalUrl = "http://localhost:3000/docs/WEBSOCKET_API.md";
   const config = new DocumentBuilder()
     .setTitle("Notes API")
